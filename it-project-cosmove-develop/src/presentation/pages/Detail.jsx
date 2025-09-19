@@ -1,217 +1,277 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, use } from "react";
+import { useParams } from "react-router-dom";
 import SubtaskMindmap from "../components/subtask/SubtaskMindmap";
-import TodoManager from "../components/todo/TodoManager";
+import SubtaskForm from "../components/subtask/SubtaskForm";
+// import TodoManager from "../components/todo/TodoManager";
 import "./Detail.css";
-import { 
-  subscribeToProject,
-  addSubtask,
-  updateSubtask,
-  deleteSubtask,
-  updateSubtaskPosition
-} from '../../services/projects';
+import Header from "../components/header/header";
+import TodoManager from "../components/todo/TodoManager";
+
+// 더미 데이터 (실제로는 Firebase에서 가져올 데이터)
+const getDummyProjectData = (projectId) => ({
+  id: projectId,
+  title: "웹사이트 개발 프로젝트",
+  deadline: new Date("2024-12-31"),
+  progress: 65,
+  priority: "상",
+  description: "회사 홈페이지 리뉴얼 프로젝트",
+  subtasks: [
+    {
+      id: "101",
+      title: "기획 정리",
+      deadline: new Date("2024-09-15"),
+      progress: 100,
+      priority: "상",
+      startDate: "2024-09-05",
+      endDate: "2024-09-15",
+      description: "요구사항 분석 및 기획서 작성"
+    },
+    {
+      id: "102", 
+      title: "UI 디자인",
+      deadline: new Date("2024-09-25"),
+      progress: 80,
+      priority: "상",
+      startDate: "2024-09-10",
+      endDate: "2024-09-25",
+      description: "화면 설계 및 디자인 시안 제작"
+    },
+    {
+      id: "103",
+      title: "프론트엔드 개발", 
+      deadline: new Date("2024-10-15"),
+      progress: 45,
+      priority: "중",
+      startDate: "2024-09-20",
+      endDate: "2024-10-15",
+      description: "React 기반 사용자 인터페이스 구현"
+    },
+    {
+      id: "104",
+      title: "백엔드 개발",
+      deadline: new Date("2024-10-20"),
+      progress: 30,
+      priority: "중", 
+      startDate: "2024-09-25",
+      endDate: "2024-10-20",
+      description: "API 서버 및 데이터베이스 구축"
+    },
+    {
+      id: "105",
+      title: "테스트 & 배포",
+      deadline: new Date("2024-11-01"),
+      progress: 0,
+      priority: "하",
+      startDate: "2024-10-15",
+      endDate: "2024-11-01", 
+      description: "QA 테스트 및 프로덕션 배포"
+    }
+  ]
+});
 
 
 function ProjectDetail() {
-  const { projectId } = useParams();
-  const navigate = useNavigate();
-  
-  const [project, setProject] = useState(null);
-  const [currentView, setCurrentView] = useState('mindmap'); // 'mindmap' | 'todo'
-  const [selectedSubtask, setSelectedSubtask] = useState(null);
-  const [subtaskPositions, setSubtaskPositions] = useState({});
+    const {projectId} = useParams();
+    // const navigate = useNavigate();
 
-  // 프로젝트 데이터 실시간 구독
-  useEffect(() => {
-    if (!projectId) return;
-    const unsubscribe = subscribeToProject(projectId, (p) => {
-      if (!p) return;
-      setProject({
-        ...p,
-        deadline: p.deadline ? new Date(p.deadline.toDate ? p.deadline.toDate() : p.deadline) : new Date(),
-      });
-      // 서브태스크 위치
-      const pos = p.subtaskPositions || {};
-      setSubtaskPositions(pos);
-    });
-    return () => unsubscribe && unsubscribe();
-  }, [projectId]);
+    const [project, setProject] = useState(null);
+    const [currentView, setCurrentView] = useState("mindmap");
+    const [selectedSubtask, setSelectedSubtask] = useState(null);
+    const [subtaskPositions, setSubtaskPositions] = useState({});
+    const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 }); // 동적 크기 반응
+    const [showAddForm, setShowAddForm] = useState(false);
 
-  // 중요도에 따른 원 크기 반환
-  const getRadius = (priority) => {
-    if (priority === "상") return 75;
-    if (priority === "중") return 55;
-    return 40;
-  };
+    //데이터 받아오기
+    useEffect(() => {
+        const projectData = getDummyProjectData(projectId);
+        setProject(projectData);
+        const initialPositions = generateInitialPositions(projectData.subtasks, canvasSize);
+        setSubtaskPositions(initialPositions);
+    }, [projectId, canvasSize]);
 
-  // 초기 subtask 위치 생성 함수는 더 이상 사용하지 않음 (실시간 데이터 사용)
-
-  // Subtask 추가
-  const handleAddSubtask = async (newSubtask) => {
-    if (!project) return;
-    const subtaskId = `subtask_${Date.now()}`;
-    const subtaskWithId = {
-      ...newSubtask,
-      id: subtaskId,
-      deadline: new Date(newSubtask.deadline),
-      progress: Number(newSubtask.progress)
+    //중요도에 따른 원 크기 
+    const getRadius = (priority) => {
+        if (priority === "상") return 75;
+        if (priority === "중") return 55;
+        return 40;
     };
-    const newPosition = findAvailablePosition();
-    // 낙관적 업데이트
-    setProject(prev => ({ ...prev, subtasks: [...(prev?.subtasks || []), subtaskWithId] }));
-    setSubtaskPositions(prev => ({ ...prev, [subtaskId]: newPosition }));
-    // 파이어베이스 반영
-    await addSubtask(project.id, subtaskWithId);
-    await updateSubtaskPosition(project.id, subtaskId, newPosition);
-  };
 
-  // 사용 가능한 위치 찾기
-  const findAvailablePosition = () => {
-    const radius = getRadius("중"); // 기본 크기
-    const padding = 20;
-    const mapWidth = 800;
-    const mapHeight = 500;
-    const maxAttempts = 100;
+    //초기 위치
+    const generateInitialPositions = (subtasks, size) => {
+        const positions = {};
+        const centerX = size.width / 2;
+        const centerY = size.height / 2;
+        const radius = Math.min(size.width, size.height) / 3;
 
-    for (let i = 0; i < maxAttempts; i++) {
-      const x = radius + Math.random() * (mapWidth - 2 * radius);
-      const y = radius + Math.random() * (mapHeight - 2 * radius);
+        subtasks.forEach((subtask, index) => {
+        const angle = (index * 2 * Math.PI) / subtasks.length;
+        const x = centerX + radius * Math.cos(angle);
+        const y = centerY + radius * Math.sin(angle);
+        const nodeRadius = getRadius(subtask.priority);
 
-      // 기존 노드들과 겹치는지 확인
-      const isOverlapping = Object.values(subtaskPositions).some(pos => {
-        const dx = pos.x - x;
-        const dy = pos.y - y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        return distance < pos.radius + radius + padding;
-      });
+        positions[subtask.id] = {
+            x: Math.max(nodeRadius, Math.min(x, size.width - nodeRadius)),
+            y: Math.max(nodeRadius, Math.min(y, size.height - nodeRadius)),
+            radius: nodeRadius
+        };
+        });
 
-      if (!isOverlapping) {
-        return { x, y, radius };
-      }
+        return positions;
+    };
+
+    //새 위치
+    const findAvailablePosition = () => {
+        const radius = getRadius("중");
+        const padding = 20;
+        const maxAttempts = 100;
+
+        for (let i = 0; i < maxAttempts; i++) {
+        const x = radius + Math.random() * (canvasSize.width - 2 * radius);
+        const y = radius + Math.random() * (canvasSize.height - 2 * radius);
+
+        const isOverlapping = Object.values(subtaskPositions).some(pos => {
+            const dx = pos.x - x;
+            const dy = pos.y - y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance < pos.radius + radius + padding;
+        });
+
+        if (!isOverlapping) return { x, y, radius };
+        }
+
+        return { x: canvasSize.width / 2, y: canvasSize.height / 2, radius };
+    };
+
+    //세부 프로젝트 추가 
+    const handleAddSubtask = (newSubtask) => {
+        if (!project) return;
+        const subtaskId = `subtask_${Date.now()}`;
+        const subtaskWithId = {
+        ...newSubtask,
+        id: subtaskId,
+        deadline: new Date(newSubtask.deadline),
+        progress: Number(newSubtask.progress)
+        };
+        const newPosition = findAvailablePosition();
+        setProject(prev => ({ ...prev, subtasks: [...prev.subtasks, subtaskWithId] }));
+        setSubtaskPositions(prev => ({ ...prev, [subtaskId]: newPosition }));
+    };
+
+    //세부 프로젝트 수정
+    const handleEditSubtask = (updatedSubtask) => {
+        if (!project) return;
+        setProject(prev => ({
+        ...prev,
+        subtasks: prev.subtasks.map(subtask =>
+            subtask.id === updatedSubtask.id
+            ? { ...updatedSubtask, deadline: new Date(updatedSubtask.deadline), progress: Number(updatedSubtask.progress) }
+            : subtask
+        )
+        }));
+        const newRadius = getRadius(updatedSubtask.priority);
+        setSubtaskPositions(prev => ({ ...prev, [updatedSubtask.id]: { ...prev[updatedSubtask.id], radius: newRadius } }));
+    };
+
+    //세부 프로젝트 삭제 
+    const handleDeleteSubtask = (subtaskId) => {
+        if (!project) return;
+        setProject(prev => ({ ...prev, subtasks: prev.subtasks.filter(s => s.id !== subtaskId) }));
+        setSubtaskPositions(prev => {
+        const newPos = { ...prev };
+        delete newPos[subtaskId];
+        return newPos;
+        });
+    };
+
+    //위치 바뀜 감지 및 업데이트 
+    const handleSubtaskPositionChange = (subtaskId, x, y) => {
+        setSubtaskPositions(prev => ({
+            ...prev,
+            [subtaskId]: {
+                ...prev[subtaskId],
+                x, 
+                y,
+            }
+        }));
+    };
+
+    //클릭 감지
+    const handleSubtaskClick = (subtask) => {
+        setSelectedSubtask(subtask);
+        console.log("click!");
+        // setCurrentView("todo");
+    };
+
+    //뒤로 가기 버튼
+    const handleBackToMindmap = () => {
+        setCurrentView("mindmap");
+        setSelectedSubtask(null);
+    };
+
+    //추가 버튼 관리 
+    const handleAddClick = () => {
+        setShowAddForm(true);
+    };
+
+    const handleFormClose = () => {
+        setShowAddForm(false);
+    };
+
+    if (!project) {
+        return <div className="loading-container"><p>프로젝트를 불러오는 중...</p></div>;
     }
 
-    // 위치를 찾지 못한 경우 랜덤 위치 반환
-    return {
-      x: radius + Math.random() * (mapWidth - 2 * radius),
-      y: radius + Math.random() * (mapHeight - 2 * radius),
-      radius
-    };
-  };
-
-  // Subtask 수정
-  const handleEditSubtask = async (updatedSubtask) => {
-    if (!project) return;
-    const normalized = {
-      ...updatedSubtask,
-      deadline: new Date(updatedSubtask.deadline),
-      progress: Number(updatedSubtask.progress)
-    };
-    setProject(prev => ({
-      ...prev,
-      subtasks: prev.subtasks.map(subtask => subtask.id === normalized.id ? normalized : subtask)
-    }));
-    const newRadius = getRadius(updatedSubtask.priority);
-    setSubtaskPositions(prev => ({
-      ...prev,
-      [updatedSubtask.id]: {
-        ...prev[updatedSubtask.id],
-        radius: newRadius
-      }
-    }));
-    await updateSubtask(project.id, normalized);
-  };
-
-  // Subtask 삭제
-  const handleDeleteSubtask = async (subtaskId) => {
-    if (!project) return;
-    setProject(prev => ({
-      ...prev,
-      subtasks: prev.subtasks.filter(subtask => subtask.id !== subtaskId)
-    }));
-    setSubtaskPositions(prev => {
-      const newPositions = { ...prev };
-      delete newPositions[subtaskId];
-      return newPositions;
-    });
-    await deleteSubtask(project.id, subtaskId);
-  };
-
-  // Subtask 위치 변경
-  const handleSubtaskPositionChange = async (subtaskId, x, y) => {
-    const radius = subtaskPositions?.[subtaskId]?.radius || 55;
-    const pos = { x, y, radius };
-    setSubtaskPositions(prev => ({ ...prev, [subtaskId]: pos }));
-    if (project) await updateSubtaskPosition(project.id, subtaskId, pos);
-  };
-
-  // Subtask 노드 클릭 (Todo 관리로 이동)
-  const handleSubtaskClick = (subtask) => {
-    setSelectedSubtask(subtask);
-    setCurrentView('todo');
-  };
-
-  // 마인드맵으로 돌아가기
-  const handleBackToMindmap = () => {
-    setCurrentView('mindmap');
-    setSelectedSubtask(null);
-  };
-
-  if (!project) {
-    return (
-      <div className="loading-container">
-        <p>프로젝트를 불러오는 중...</p>
-      </div>
-    );
-  }
 
   return (
-    <div className="project-detail-container">
-      {/* 헤더 */}
-      <header className="project-detail-header">
-        <button 
-          className="back-button"
-          onClick={() => navigate('/home')}
-        >
-          ← 홈으로 돌아가기
-        </button>
-        <div className="project-info">
-          <h1>{project.title}</h1>
-          <div className="project-meta">
-            <span className={`priority-badge ${project.priority}`}>
-              중요도: {project.priority}
-            </span>
-            <span className="progress-badge">
-              진행도: {project.progress}%
-            </span>
-            <span className="deadline-badge">
-              마감일: {project.deadline.toLocaleDateString('ko-KR')}
-            </span>
-          </div>
+    <div className="body">
+        <div className="container">
+            {/* 이 부분을 '지우고' sidebar컴포넌트를 넣는다. */}
+            {/* 단, sidebar 컴포넌트 전체를 감싼 div태그 className은 무조건 sidebar로 할 것 */}
+            <aside className="sidebar">
+            </aside>
+
+            <div className="main-wrapper">
+                <Header onAddClick={handleAddClick}/>    
+                <article className="main-article">
+                        <div className="date">2025년 09월 10일</div>
+                        <div className="title">
+                            <span className="highlight">과탑되기</span>의 행성들을 정복해보아요!
+                        </div>
+                </article>
+                <main className="content-area">
+                    <SubtaskMindmap
+                        project ={project}
+                        positions={subtaskPositions}
+                        onSubtaskClick={handleSubtaskClick}
+                        onAddSubtask={handleEditSubtask}
+                        onDeleteSubtask={{handleDeleteSubtask}}
+                        onPositionChange={handleSubtaskPositionChange}
+                        onCanvasResize={(w,h)=> setCanvasSize({width:w, height:h})}
+                    />
+                    <TodoManager
+                        subtask={null}
+                    />
+                    {/* <section className="main-content"></section> */}
+                    {/* <section className="todo-bar"></section> */}
+                </main>
+
+                {/* 마찬가지로 이 부분을 '지우고' 타임라인 컴포넌트를 넣는다. */}
+                {/* 단, timeline 컴포넌트 전체를 감싼 div태그 className은 무조건 timeline로 할 것 */}
+                <footer className="timeline">
+                    2024.06.20
+                </footer>
+                {showAddForm && (
+                    <SubtaskForm
+                    onSubmit={(newSubtask) => {
+                        handleAddSubtask(newSubtask);
+                        setShowAddForm(false);
+                    }}
+                    onClose={handleFormClose}
+                    />
+
+                )}
+            </div>
         </div>
-      </header>
-
-      {/* 메인 콘텐츠 */}
-      <main className="project-detail-main">
-        {currentView === 'mindmap' && (
-          <SubtaskMindmap
-            project={project}
-            positions={subtaskPositions}
-            onSubtaskClick={handleSubtaskClick}
-            onAddSubtask={handleAddSubtask}
-            onEditSubtask={handleEditSubtask}
-            onDeleteSubtask={handleDeleteSubtask}
-            onPositionChange={handleSubtaskPositionChange}
-          />
-        )}
-
-        {currentView === 'todo' && selectedSubtask && (
-          <TodoManager
-            subtask={selectedSubtask}
-            onBack={handleBackToMindmap}
-            projectId={projectId}
-          />
-        )}
-      </main>
     </div>
   );
 }

@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState } from "react";
 import EditSubtaskForm from "./EditSubtaskForm";
 
-function SubtaskNode({ node, onMove, onClick, onEdit, onDelete }) {
+function SubtaskNode({ node, mapOffset, onMove, onClick, onEdit, onDelete }) {
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
@@ -52,7 +52,8 @@ function SubtaskNode({ node, onMove, onClick, onEdit, onDelete }) {
     e.stopPropagation();
   };
 
-  const onMouseMove = useCallback((e) => {
+  //드래그 중
+  const onMouseMove = (e) => {
     if (dragging) {
       const moveDistance = Math.sqrt(
         Math.pow(e.clientX - dragStartPos.x, 2) + 
@@ -64,9 +65,10 @@ function SubtaskNode({ node, onMove, onClick, onEdit, onDelete }) {
         onMove(node.id, e.clientX - offset.x, e.clientY - offset.y);
       }
     }
-  }, [dragging, dragStartPos, offset, onMove, node.id]);
+  };
 
-  const onMouseUp = useCallback((e) => {
+  // 드래그 종료 
+  const onMouseUp = (e) => {
     setDragging(false);
     
     if (!hasMoved) {
@@ -76,7 +78,7 @@ function SubtaskNode({ node, onMove, onClick, onEdit, onDelete }) {
     setHasMoved(false);
     e.preventDefault();
     e.stopPropagation();
-  }, [hasMoved, onClick]);
+  };
 
   const handleClick = (e) => {
     e.preventDefault();
@@ -84,7 +86,7 @@ function SubtaskNode({ node, onMove, onClick, onEdit, onDelete }) {
   };
 
   // 전역 마우스 이벤트 처리
-  useEffect(() => {
+  React.useEffect(() => {
     const handleGlobalMouseMove = (e) => {
       if (dragging) {
         onMouseMove(e);
@@ -106,7 +108,7 @@ function SubtaskNode({ node, onMove, onClick, onEdit, onDelete }) {
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [dragging, onMouseMove, onMouseUp]);
+  }, [dragging, hasMoved, offset]);
 
   // 노드 크기 계산 (반지름 기반)
   const nodeSize = node.radius ? node.radius * 2 : (node.isCenter ? 120 : 80);
@@ -118,8 +120,8 @@ function SubtaskNode({ node, onMove, onClick, onEdit, onDelete }) {
         className={`subtask-node ${node.isCenter ? 'center' : ''}`}
         style={{
           position: 'absolute',
-          left: node.x - nodeSize / 2,
-          top: node.y - nodeSize / 2,
+          left: (node.x + (mapOffset?.x || 0)) - nodeSize / 2,
+          top: (node.y + (mapOffset?.y || 0)) - nodeSize / 2,
           width: nodeSize,
           height: nodeSize,
           backgroundColor: getPriorityColor(node.priority, node.isCenter),
