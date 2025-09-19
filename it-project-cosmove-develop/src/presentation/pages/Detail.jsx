@@ -223,22 +223,23 @@ function ProjectDetail() {
 
 
   return (
-    <div className="body">
-        <div className="container">
+    <div className="App">
+    <div className="body-detail">
+        <div className="container-detail">
             {/* 이 부분을 '지우고' sidebar컴포넌트를 넣는다. */}
             {/* 단, sidebar 컴포넌트 전체를 감싼 div태그 className은 무조건 sidebar로 할 것 */}
-            <aside className="sidebar">
+            <aside className="sidebar-detail">
             </aside>
 
-            <div className="main-wrapper">
+            <div className="main-wrapper-detail">
                 <Header onAddClick={handleAddClick}/>    
-                <article className="main-article">
-                        <div className="date">2025년 09월 10일</div>
-                        <div className="title">
-                            <span className="highlight">과탑되기</span>의 행성들을 정복해보아요!
+                <article className="main-article-detail">
+                        <div className="date-detail">2025년 09월 10일</div>
+                        <div className="title-detail">
+                            <span className="highlight-detail">과탑되기</span>의 행성들을 정복해보아요!
                         </div>
                 </article>
-                <main className="content-area">
+                <main className="content-area-detail">
                     <SubtaskMindmap
                         project ={project}
                         positions={subtaskPositions}
@@ -257,7 +258,7 @@ function ProjectDetail() {
 
                 {/* 마찬가지로 이 부분을 '지우고' 타임라인 컴포넌트를 넣는다. */}
                 {/* 단, timeline 컴포넌트 전체를 감싼 div태그 className은 무조건 timeline로 할 것 */}
-                <footer className="timeline">
+                <footer className="timeline-detail">
                     2024.06.20
                 </footer>
                 {showAddForm && (
@@ -272,6 +273,7 @@ function ProjectDetail() {
                 )}
             </div>
         </div>
+    </div>
     </div>
   );
 }

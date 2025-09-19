@@ -196,7 +196,7 @@ function SubtaskMindmap({
 
   return (
         
-        <div className="main-content">
+        <div className="main-content-detail">
             {/* 프로젝트 정보 */}
             <article className="main-content--info">
                 <span className="bold">과탑되기</span>의 세부 프로젝트 :
