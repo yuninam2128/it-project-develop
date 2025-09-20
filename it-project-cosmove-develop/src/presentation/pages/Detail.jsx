@@ -35,9 +35,14 @@ function ProjectDetail() {
                     if (!projectData.subtasks) {
                         projectData.subtasks = [];
                     }
+                    // 기존 subtask에 todos 속성이 없으면 빈 배열로 초기화
+                    projectData.subtasks = projectData.subtasks.map(subtask => ({
+                        ...subtask,
+                        todos: subtask.todos || []
+                    }));
                     setProject(projectData);
-                    console.log("프로젝트 로드됨:", projectData);
-                    console.log("서브태스크 개수:", projectData.subtasks.length);
+                    // console.log("프로젝트 로드됨:", projectData);
+                    // console.log("서브태스크 개수:", projectData.subtasks.length);
 
                     if (projectData.subtasks.length > 0) {
                         const initialPositions = generateInitialPositions(projectData.subtasks, canvasSize);
@@ -123,7 +128,8 @@ function ProjectDetail() {
                 ...newSubtask,
                 id: subtaskId,
                 deadline: new Date(newSubtask.deadline),
-                progress: Number(newSubtask.progress)
+                progress: Number(newSubtask.progress),
+                todos: []
             };
 
             const newPosition = findAvailablePosition();
@@ -133,15 +139,15 @@ function ProjectDetail() {
             setProject(prev => ({ ...prev, subtasks: updatedSubtasks }));
             setSubtaskPositions(prev => ({ ...prev, [subtaskId]: newPosition }));
 
-            console.log("새 서브태스크 추가됨:", subtaskWithId);
-            console.log("현재 project.subtasks 길이:", updatedSubtasks.length);
+            // console.log("새 서브태스크 추가됨:", subtaskWithId);
+            // console.log("현재 project.subtasks 길이:", updatedSubtasks.length);
 
             // Firebase에 업데이트된 프로젝트 저장
             await projectRepository.update(projectId, {
                 subtasks: updatedSubtasks
             });
 
-            console.log("Firebase에 서브태스크 저장 완료");
+            // console.log("Firebase에 서브태스크 저장 완료");
 
         } catch (error) {
             console.error("서브태스크 추가 중 오류:", error);
@@ -165,7 +171,11 @@ function ProjectDetail() {
         try {
             const updatedSubtasks = project.subtasks.map(subtask =>
                 subtask.id === updatedSubtask.id
-                ? { ...updatedSubtask, deadline: new Date(updatedSubtask.deadline), progress: Number(updatedSubtask.progress) }
+                ? {
+                    ...updatedSubtask,
+                    deadline: updatedSubtask.deadline instanceof Date ? updatedSubtask.deadline : new Date(updatedSubtask.deadline),
+                    progress: Number(updatedSubtask.progress)
+                  }
                 : subtask
             );
 
@@ -174,14 +184,14 @@ function ProjectDetail() {
             const newRadius = getRadius(updatedSubtask.priority);
             setSubtaskPositions(prev => ({ ...prev, [updatedSubtask.id]: { ...prev[updatedSubtask.id], radius: newRadius } }));
 
-            console.log("서브태스크 수정됨:", updatedSubtask);
+            // console.log("서브태스크 수정됨:", updatedSubtask);
 
             // Firebase에 업데이트된 프로젝트 저장
             await projectRepository.update(projectId, {
                 subtasks: updatedSubtasks
             });
 
-            console.log("Firebase에 서브태스크 수정 저장 완료");
+            // console.log("Firebase에 서브태스크 수정 저장 완료");
 
         } catch (error) {
             console.error("서브태스크 수정 중 오류:", error);
@@ -202,18 +212,18 @@ function ProjectDetail() {
                 return newPos;
             });
 
-            console.log("서브태스크 삭제됨:", subtaskId);
-            console.log("현재 project.subtasks 길이:", updatedSubtasks.length);
+            // console.log("서브태스크 삭제됨:", subtaskId);
+            // console.log("현재 project.subtasks 길이:", updatedSubtasks.length);
 
             // Firebase에 업데이트된 프로젝트 저장
             await projectRepository.update(projectId, {
                 subtasks: updatedSubtasks
             });
 
-            console.log("Firebase에 서브태스크 삭제 저장 완료");
+            // console.log("Firebase에 서브태스크 삭제 저장 완료");
 
         } catch (error) {
-            console.error("서브태스크 삭제 중 오류:", error);
+            // console.error("서브태스크 삭제 중 오류:", error);
         }
     };
 
@@ -233,6 +243,7 @@ function ProjectDetail() {
     const handleSubtaskClick = (subtask) => {
         setSelectedSubtask(subtask);
         console.log("click!");
+        console.log(subtask.todos);
         // setCurrentView("todo");
     };
 
@@ -285,7 +296,8 @@ function ProjectDetail() {
                         onCanvasResize={(w,h)=> setCanvasSize({width:w, height:h})}
                     />
                     <TodoManager
-                        subtask={null}
+                        subtask={selectedSubtask}
+                        onUpdateSubtask={handleEditSubtask}
                     />
                     {/* <section className="main-content"></section> */}
                     {/* <section className="todo-bar"></section> */}

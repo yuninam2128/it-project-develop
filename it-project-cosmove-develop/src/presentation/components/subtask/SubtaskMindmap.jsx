@@ -195,7 +195,6 @@ function SubtaskMindmap({
   }, [isDragging, lastMousePos]);
 
   return (
-        
         <div className="main-content-detail">
             {/* 프로젝트 정보 */}
             <article className="main-content--info">

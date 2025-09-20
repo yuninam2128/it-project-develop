@@ -4,7 +4,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 // Firebase Timestamp 제거
 import Header from "../components/header/header"; //(명시)
 import ProjectMap from "../components/project/ProjectMap"; // (명시)
-//import TodoList from "../components/todo/Todo"; //(명시)
+import TodoList from "../components/todo/TodoList"; //(명시)
 import Sidebar from "../components/sidebar/Sidebar"; //(명시)
 import Inspiration from "../components/inspiration/Inspiration"; //(명시)
 import ProjectTimeline from "../components/project/ProjectTimeline"; //(명시)
@@ -372,6 +372,7 @@ function Home() {
             <div className="todo">
               <h3>오늘의 할 일</h3>
               {/*투두리스트 추가예정*/}
+              <TodoList/>
             </div>
             <div className="inspiration">
               <Inspiration />

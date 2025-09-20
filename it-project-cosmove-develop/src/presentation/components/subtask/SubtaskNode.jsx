@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import EditSubtaskForm from "./EditSubtaskForm";
+import './SubtaskNode.css';
 
 function SubtaskNode({ node, mapOffset, onMove, onClick, onEdit, onDelete }) {
   const [dragging, setDragging] = useState(false);
@@ -9,32 +10,33 @@ function SubtaskNode({ node, mapOffset, onMove, onClick, onEdit, onDelete }) {
   const [isHovered, setIsHovered] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
 
-  // 중요도에 따른 색상 반환
-  const getPriorityColor = (priority, isCenter) => {
-    if (isCenter) return '#e24a6f';
+  // 중요도에 따른 CSS 클래스 반환
+  const getPriorityClass = (priority, isCenter) => {
+    if (isCenter) {
+      switch (priority) {
+      case '상': return 'center-high';
+      case '중': return 'center-medium';
+      case '하': return 'center-low';
+      default: return 'center-default';
+    }
+    }
     
     switch (priority) {
-      case '상': return '#dc3545'; // 빨간색
-      case '중': return '#4a90e2'; // 파란색
-      case '하': return '#28a745'; // 초록색
-      default: return '#6c757d'; // 회색
+      case '상': return 'priority-high';
+      case '중': return 'priority-medium';
+      case '하': return 'priority-low';
+      default: return 'priority-default';
     }
   };
 
-  // 진행도에 따른 테두리 스타일
-  const getProgressStyle = (progress) => {
+  // 진행도에 따른 CSS 클래스 반환
+  const getProgressClass = (progress) => {
     if (progress === 100) {
-      return {
-        border: '3px solid #28a745',
-        boxShadow: '0 0 10px rgba(40, 167, 69, 0.3)'
-      };
+      return 'progress-complete';
     } else if (progress >= 50) {
-      return {
-        border: '3px solid #ffc107',
-        boxShadow: '0 0 10px rgba(255, 193, 7, 0.3)'
-      };
+      return 'progress-half';
     }
-    return {};
+    return '';
   };
 
   const onMouseDown = (e) => {
@@ -117,44 +119,28 @@ function SubtaskNode({ node, mapOffset, onMove, onClick, onEdit, onDelete }) {
   return (
     <>
       <div
-        className="subtask-wrapper"
+        className={`subtask-wrapper ${dragging ? 'dragging' : ''}`}
         style={{
-          position: 'absolute',
           left: (node.x + (mapOffset?.x || 0)) - nodeSize / 2,
           top: (node.y + (mapOffset?.y || 0)) - nodeSize / 2,
-          zIndex: dragging ? 1000 : 1,
-          padding: '20px',
-          margin: '-20px'
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         <div
-          className={`subtask-node ${node.isCenter ? 'center' : ''}`}
+          className={`subtask-node ${node.isCenter ? 'center' : ''} ${dragging && hasMoved ? 'dragging' : ''} ${getPriorityClass(node.priority, node.isCenter)} ${getProgressClass(node.progress)}`}
           style={{
             width: nodeSize,
             height: nodeSize,
-            backgroundColor: getPriorityColor(node.priority, node.isCenter),
             borderRadius: borderRadius,
-            cursor: dragging && hasMoved ? 'grabbing' : 'grab',
-            transition: dragging ? 'none' : 'all 0.1s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontSize: node.isCenter ? '14px' : '12px',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            userSelect: 'none',
-            ...getProgressStyle(node.progress)
           }}
           onClick={handleClick}
           onMouseDown={onMouseDown}
         >
-          <div style={{ padding: '5px' }}>
+          <div className="subtask-node-content">
             <div>{node.label}</div>
             {!node.isCenter && (
-              <div style={{ fontSize: '10px', marginTop: '2px', opacity: 0.9 }}>
+              <div className="subtask-node-progress">
                 {node.progress}%
               </div>
             )}
@@ -163,63 +149,24 @@ function SubtaskNode({ node, mapOffset, onMove, onClick, onEdit, onDelete }) {
 
         {/* 호버 시 수정/삭제 버튼 (중심 노드 제외) */}
         {!node.isCenter && isHovered && (
-          <div
-            className="subtask-node-buttons"
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '100%',
-              transform: 'translateY(-50%)',
-              marginLeft: '-20px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '5px',
-              zIndex: 9999
-            }}
-          >
+          <div className="subtask-node-buttons">
             <button
+              className="subtask-node-button edit-button"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowEditForm(true);
-              }}
-              style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: '50%',
-                border: 'none',
-                backgroundColor: '#AFB8FF',
-                color: 'white',
-                fontSize: '16px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'background-color 0.3s, transform 0.2s'
               }}
               title="수정"
             >
               ✏️
             </button>
             <button
+              className="subtask-node-button delete-button"
               onClick={(e) => {
                 e.stopPropagation();
                 if (window.confirm('이 세부 작업을 삭제하시겠습니까?')) {
                   onDelete();
                 }
-              }}
-              style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: '50%',
-                border: 'none',
-                backgroundColor: '#AFB8FF',
-                color: 'white',
-                fontSize: '16px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'background-color 0.3s, transform 0.2s'
               }}
               title="삭제"
             >

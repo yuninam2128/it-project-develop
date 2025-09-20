@@ -85,13 +85,13 @@ function ProjectTimeline() {
         const deadlineDate = convertFirebaseTimestamp(project.deadline);
                 
         // 콘솔에 디버깅 출력
-        console.log(`Project ${index}:`, {
-          title: project.title,
-          createdAt: project.createdAt,
-          deadline: project.deadline,
-          createdDate: createdDate,
-          deadlineDate: deadlineDate
-        });
+        // console.log(`Project ${index}:`, {
+        //   title: project.title,
+        //   createdAt: project.createdAt,
+        //   deadline: project.deadline,
+        //   createdDate: createdDate,
+        //   deadlineDate: deadlineDate
+        // });
 
         // 🔹 진행률 계산 변수
         let progressRatio = 0;
