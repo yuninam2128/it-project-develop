@@ -117,53 +117,64 @@ function SubtaskNode({ node, mapOffset, onMove, onClick, onEdit, onDelete }) {
   return (
     <>
       <div
-        className={`subtask-node ${node.isCenter ? 'center' : ''}`}
+        className="subtask-wrapper"
         style={{
           position: 'absolute',
           left: (node.x + (mapOffset?.x || 0)) - nodeSize / 2,
           top: (node.y + (mapOffset?.y || 0)) - nodeSize / 2,
-          width: nodeSize,
-          height: nodeSize,
-          backgroundColor: getPriorityColor(node.priority, node.isCenter),
-          borderRadius: borderRadius,
-          cursor: dragging && hasMoved ? 'grabbing' : 'grab',
-          transition: dragging ? 'none' : 'all 0.1s ease',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontSize: node.isCenter ? '14px' : '12px',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          userSelect: 'none',
           zIndex: dragging ? 1000 : 1,
-          ...getProgressStyle(node.progress)
+          padding: '20px',
+          margin: '-20px'
         }}
-        onClick={handleClick}
-        onMouseDown={onMouseDown}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div style={{ padding: '5px' }}>
-          <div>{node.label}</div>
-          {!node.isCenter && (
-            <div style={{ fontSize: '10px', marginTop: '2px', opacity: 0.9 }}>
-              {node.progress}%
-            </div>
-          )}
+        <div
+          className={`subtask-node ${node.isCenter ? 'center' : ''}`}
+          style={{
+            width: nodeSize,
+            height: nodeSize,
+            backgroundColor: getPriorityColor(node.priority, node.isCenter),
+            borderRadius: borderRadius,
+            cursor: dragging && hasMoved ? 'grabbing' : 'grab',
+            transition: dragging ? 'none' : 'all 0.1s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: node.isCenter ? '14px' : '12px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            userSelect: 'none',
+            ...getProgressStyle(node.progress)
+          }}
+          onClick={handleClick}
+          onMouseDown={onMouseDown}
+        >
+          <div style={{ padding: '5px' }}>
+            <div>{node.label}</div>
+            {!node.isCenter && (
+              <div style={{ fontSize: '10px', marginTop: '2px', opacity: 0.9 }}>
+                {node.progress}%
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 호버 시 수정/삭제 버튼 (중심 노드 제외) */}
         {!node.isCenter && isHovered && (
-          <div 
+          <div
             className="subtask-node-buttons"
             style={{
               position: 'absolute',
-              top: '-35px',
-              right: '-10px',
+              top: '50%',
+              left: '100%',
+              transform: 'translateY(-50%)',
+              marginLeft: '-20px',
               display: 'flex',
+              flexDirection: 'column',
               gap: '5px',
-              zIndex: 1001
+              zIndex: 9999
             }}
           >
             <button
@@ -172,17 +183,18 @@ function SubtaskNode({ node, mapOffset, onMove, onClick, onEdit, onDelete }) {
                 setShowEditForm(true);
               }}
               style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '12px',
+                width: '30px',
+                height: '30px',
+                borderRadius: '50%',
                 border: 'none',
-                backgroundColor: '#17a2b8',
+                backgroundColor: '#AFB8FF',
                 color: 'white',
-                fontSize: '12px',
+                fontSize: '16px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                transition: 'background-color 0.3s, transform 0.2s'
               }}
               title="수정"
             >
@@ -196,17 +208,18 @@ function SubtaskNode({ node, mapOffset, onMove, onClick, onEdit, onDelete }) {
                 }
               }}
               style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '12px',
+                width: '30px',
+                height: '30px',
+                borderRadius: '50%',
                 border: 'none',
-                backgroundColor: '#dc3545',
+                backgroundColor: '#AFB8FF',
                 color: 'white',
-                fontSize: '12px',
+                fontSize: '16px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                transition: 'background-color 0.3s, transform 0.2s'
               }}
               title="삭제"
             >
