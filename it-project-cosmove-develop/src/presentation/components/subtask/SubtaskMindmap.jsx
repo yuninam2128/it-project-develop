@@ -50,7 +50,7 @@ function SubtaskMindmap({
       progress: project.progress
     };
 
-    const subtaskNodes = project.subtasks.map(subtask => {
+    const subtaskNodes = (project.subtasks || []).map(subtask => {
       const position = positions[subtask.id] || { x: 400, y: 250, radius: 55 };
       return {
         id: subtask.id,
@@ -68,9 +68,9 @@ function SubtaskMindmap({
     return [center, ...subtaskNodes];
   };
 
-  //연결선 데이터 생성 
+  //연결선 데이터 생성
   const generateEdges = () => {
-    return project.subtasks.map(subtask => ({
+    return (project.subtasks || []).map(subtask => ({
       id: `edge-${subtask.id}`,
       from: CENTER_NODE_ID,
       to: subtask.id
