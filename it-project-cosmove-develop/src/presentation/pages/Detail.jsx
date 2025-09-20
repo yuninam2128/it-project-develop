@@ -29,8 +29,15 @@ function ProjectDetail() {
                 setLoading(true);
                 const projectData = await projectRepository.getById(projectId);
                 if (projectData) {
+                    // subtasks가 없으면 빈 배열로 초기화
+                    if (!projectData.subtasks) {
+                        projectData.subtasks = [];
+                    }
                     setProject(projectData);
-                    if (projectData.subtasks) {
+                    console.log("프로젝트 로드됨:", projectData);
+                    console.log("서브태스크 개수:", projectData.subtasks.length);
+
+                    if (projectData.subtasks.length > 0) {
                         const initialPositions = generateInitialPositions(projectData.subtasks, canvasSize);
                         setSubtaskPositions(initialPositions);
                     }
@@ -103,45 +110,109 @@ function ProjectDetail() {
         return { x: canvasSize.width / 2, y: canvasSize.height / 2, radius };
     };
 
-    //세부 프로젝트 추가 
-    const handleAddSubtask = (newSubtask) => {
+    //세부 프로젝트 추가
+    const handleAddSubtask = async (newSubtask) => {
         if (!project) return;
+
         const subtaskId = `subtask_${Date.now()}`;
-        const subtaskWithId = {
-        ...newSubtask,
-        id: subtaskId,
-        deadline: new Date(newSubtask.deadline),
-        progress: Number(newSubtask.progress)
-        };
-        const newPosition = findAvailablePosition();
-        setProject(prev => ({ ...prev, subtasks: [...prev.subtasks, subtaskWithId] }));
-        setSubtaskPositions(prev => ({ ...prev, [subtaskId]: newPosition }));
+
+        try {
+            const subtaskWithId = {
+                ...newSubtask,
+                id: subtaskId,
+                deadline: new Date(newSubtask.deadline),
+                progress: Number(newSubtask.progress)
+            };
+
+            const newPosition = findAvailablePosition();
+
+            // 로컬 state 업데이트
+            const updatedSubtasks = [...(project.subtasks || []), subtaskWithId];
+            setProject(prev => ({ ...prev, subtasks: updatedSubtasks }));
+            setSubtaskPositions(prev => ({ ...prev, [subtaskId]: newPosition }));
+
+            console.log("새 서브태스크 추가됨:", subtaskWithId);
+            console.log("현재 project.subtasks 길이:", updatedSubtasks.length);
+
+            // Firebase에 업데이트된 프로젝트 저장
+            await projectRepository.update(projectId, {
+                subtasks: updatedSubtasks
+            });
+
+            console.log("Firebase에 서브태스크 저장 완료");
+
+        } catch (error) {
+            console.error("서브태스크 추가 중 오류:", error);
+            // 오류 발생 시 로컬 state 롤백
+            setProject(prev => ({
+                ...prev,
+                subtasks: prev.subtasks.filter(s => s.id !== subtaskId)
+            }));
+            setSubtaskPositions(prev => {
+                const newPos = { ...prev };
+                delete newPos[subtaskId];
+                return newPos;
+            });
+        }
     };
 
     //세부 프로젝트 수정
-    const handleEditSubtask = (updatedSubtask) => {
+    const handleEditSubtask = async (updatedSubtask) => {
         if (!project) return;
-        setProject(prev => ({
-        ...prev,
-        subtasks: prev.subtasks.map(subtask =>
-            subtask.id === updatedSubtask.id
-            ? { ...updatedSubtask, deadline: new Date(updatedSubtask.deadline), progress: Number(updatedSubtask.progress) }
-            : subtask
-        )
-        }));
-        const newRadius = getRadius(updatedSubtask.priority);
-        setSubtaskPositions(prev => ({ ...prev, [updatedSubtask.id]: { ...prev[updatedSubtask.id], radius: newRadius } }));
+
+        try {
+            const updatedSubtasks = project.subtasks.map(subtask =>
+                subtask.id === updatedSubtask.id
+                ? { ...updatedSubtask, deadline: new Date(updatedSubtask.deadline), progress: Number(updatedSubtask.progress) }
+                : subtask
+            );
+
+            setProject(prev => ({ ...prev, subtasks: updatedSubtasks }));
+
+            const newRadius = getRadius(updatedSubtask.priority);
+            setSubtaskPositions(prev => ({ ...prev, [updatedSubtask.id]: { ...prev[updatedSubtask.id], radius: newRadius } }));
+
+            console.log("서브태스크 수정됨:", updatedSubtask);
+
+            // Firebase에 업데이트된 프로젝트 저장
+            await projectRepository.update(projectId, {
+                subtasks: updatedSubtasks
+            });
+
+            console.log("Firebase에 서브태스크 수정 저장 완료");
+
+        } catch (error) {
+            console.error("서브태스크 수정 중 오류:", error);
+        }
     };
 
-    //세부 프로젝트 삭제 
-    const handleDeleteSubtask = (subtaskId) => {
+    //세부 프로젝트 삭제
+    const handleDeleteSubtask = async (subtaskId) => {
         if (!project) return;
-        setProject(prev => ({ ...prev, subtasks: prev.subtasks.filter(s => s.id !== subtaskId) }));
-        setSubtaskPositions(prev => {
-        const newPos = { ...prev };
-        delete newPos[subtaskId];
-        return newPos;
-        });
+
+        try {
+            const updatedSubtasks = project.subtasks.filter(s => s.id !== subtaskId);
+
+            setProject(prev => ({ ...prev, subtasks: updatedSubtasks }));
+            setSubtaskPositions(prev => {
+                const newPos = { ...prev };
+                delete newPos[subtaskId];
+                return newPos;
+            });
+
+            console.log("서브태스크 삭제됨:", subtaskId);
+            console.log("현재 project.subtasks 길이:", updatedSubtasks.length);
+
+            // Firebase에 업데이트된 프로젝트 저장
+            await projectRepository.update(projectId, {
+                subtasks: updatedSubtasks
+            });
+
+            console.log("Firebase에 서브태스크 삭제 저장 완료");
+
+        } catch (error) {
+            console.error("서브태스크 삭제 중 오류:", error);
+        }
     };
 
     //위치 바뀜 감지 및 업데이트 
@@ -205,8 +276,8 @@ function ProjectDetail() {
                         project ={project}
                         positions={subtaskPositions}
                         onSubtaskClick={handleSubtaskClick}
-                        onAddSubtask={handleEditSubtask}
-                        onDeleteSubtask={{handleDeleteSubtask}}
+                        onEditSubtask={handleEditSubtask}
+                        onDeleteSubtask={handleDeleteSubtask}
                         onPositionChange={handleSubtaskPositionChange}
                         onCanvasResize={(w,h)=> setCanvasSize({width:w, height:h})}
                     />
