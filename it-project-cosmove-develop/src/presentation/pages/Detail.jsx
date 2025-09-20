@@ -1,92 +1,53 @@
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import SubtaskMindmap from "../components/subtask/SubtaskMindmap";
 import SubtaskForm from "../components/subtask/SubtaskForm";
-// import TodoManager from "../components/todo/TodoManager";
 import "./Detail.css";
 import Header from "../components/header/header";
 import TodoManager from "../components/todo/TodoManager";
+import { FirebaseProjectRepository } from "../../infrastructure/repositories/FirebaseProjectRepository";
 
-// 더미 데이터 (실제로는 Firebase에서 가져올 데이터)
-const getDummyProjectData = (projectId) => ({
-  id: projectId,
-  title: "웹사이트 개발 프로젝트",
-  deadline: new Date("2024-12-31"),
-  progress: 65,
-  priority: "상",
-  description: "회사 홈페이지 리뉴얼 프로젝트",
-  subtasks: [
-    {
-      id: "101",
-      title: "기획 정리",
-      deadline: new Date("2024-09-15"),
-      progress: 100,
-      priority: "상",
-      startDate: "2024-09-05",
-      endDate: "2024-09-15",
-      description: "요구사항 분석 및 기획서 작성"
-    },
-    {
-      id: "102", 
-      title: "UI 디자인",
-      deadline: new Date("2024-09-25"),
-      progress: 80,
-      priority: "상",
-      startDate: "2024-09-10",
-      endDate: "2024-09-25",
-      description: "화면 설계 및 디자인 시안 제작"
-    },
-    {
-      id: "103",
-      title: "프론트엔드 개발", 
-      deadline: new Date("2024-10-15"),
-      progress: 45,
-      priority: "중",
-      startDate: "2024-09-20",
-      endDate: "2024-10-15",
-      description: "React 기반 사용자 인터페이스 구현"
-    },
-    {
-      id: "104",
-      title: "백엔드 개발",
-      deadline: new Date("2024-10-20"),
-      progress: 30,
-      priority: "중", 
-      startDate: "2024-09-25",
-      endDate: "2024-10-20",
-      description: "API 서버 및 데이터베이스 구축"
-    },
-    {
-      id: "105",
-      title: "테스트 & 배포",
-      deadline: new Date("2024-11-01"),
-      progress: 0,
-      priority: "하",
-      startDate: "2024-10-15",
-      endDate: "2024-11-01", 
-      description: "QA 테스트 및 프로덕션 배포"
-    }
-  ]
-});
 
 
 function ProjectDetail() {
     const {projectId} = useParams();
-    // const navigate = useNavigate();
 
     const [project, setProject] = useState(null);
     const [currentView, setCurrentView] = useState("mindmap");
     const [selectedSubtask, setSelectedSubtask] = useState(null);
     const [subtaskPositions, setSubtaskPositions] = useState({});
-    const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 }); // 동적 크기 반응
+    const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 });
     const [showAddForm, setShowAddForm] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    //데이터 받아오기
+    const projectRepository = new FirebaseProjectRepository();
+
     useEffect(() => {
-        const projectData = getDummyProjectData(projectId);
-        setProject(projectData);
-        const initialPositions = generateInitialPositions(projectData.subtasks, canvasSize);
-        setSubtaskPositions(initialPositions);
+        const fetchProject = async () => {
+            try {
+                setLoading(true);
+                const projectData = await projectRepository.getById(projectId);
+                if (projectData) {
+                    setProject(projectData);
+                    if (projectData.subtasks) {
+                        const initialPositions = generateInitialPositions(projectData.subtasks, canvasSize);
+                        setSubtaskPositions(initialPositions);
+                    }
+                } else {
+                    setError("프로젝트를 찾을 수 없습니다.");
+                }
+            } catch (err) {
+                console.error("프로젝트 데이터 로딩 오류:", err);
+                setError("프로젝트 데이터를 불러오는 중 오류가 발생했습니다.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (projectId) {
+            fetchProject();
+        }
     }, [projectId, canvasSize]);
 
     //중요도에 따른 원 크기 
