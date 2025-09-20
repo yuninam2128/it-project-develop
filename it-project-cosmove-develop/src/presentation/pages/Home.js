@@ -4,7 +4,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 // Firebase Timestamp 제거
 import Header from "../components/header/header"; //(명시)
 import ProjectMap from "../components/project/ProjectMap"; // (명시)
-import TodoList from "../components/todo/Todo"; //(명시)
+//import TodoList from "../components/todo/Todo"; //(명시)
 import Sidebar from "../components/sidebar/Sidebar"; //(명시)
 import Inspiration from "../components/inspiration/Inspiration"; //(명시)
 import ProjectTimeline from "../components/project/ProjectTimeline"; //(명시)
@@ -31,6 +31,7 @@ function Home() {
   const navigate = useNavigate(); //페이지 이동 함수 
   const [displayName, setDisplayName] = useState(''); //이름 가져오는 중인지 여부 
   const [isLoadingName, setIsLoadingName] = useState(true);
+  // const today = getCurrentDate(); // 오늘 날짜 변수
 
   //로그인 상태 구독
   useEffect(() => {
@@ -329,10 +330,7 @@ function Home() {
 
       {/* 게임 스타일 사이드바 */}
       <div className="sidebar-container">
-        <Sidebar 
-          onAddProject={() => setShowForm(true)}
-          projects={projects} 
-        />
+        <Sidebar />
       </div>
 
       {/* 메인 콘텐츠 영역 */}
@@ -345,6 +343,9 @@ function Home() {
             currentDate={getCurrentDate()}
             onAddClick={() => setShowForm(true)}
           />
+          <div className="main-header-info">
+            <h1>{displayName}님, 오늘은 어떤 우주를 정복해볼까요?</h1>
+          </div>
         </header>
 
         {/*작업영역*/}
